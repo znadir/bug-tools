@@ -51,7 +51,7 @@ cat subdomains.txt | httpx -fc 301,404,403 | tee subdomains.txt
 
 echo -e "\n${GREEN}[+] Katana Url Crawling ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Crawling subdomains for URLs...${NORMAL}\n"
-cat subdomains.txt | katana -c 10 | tee urls.txt
+cat subdomains.txt | katana -c 10 -ct 60 | tee urls.txt
 
 echo -e "\n${GREEN}[+] Get All Urls ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Getting URLs from external sources...${NORMAL}\n"
@@ -71,6 +71,10 @@ cat urls.txt | httpx -title -sc -td -location
 echo -e "\n${GREEN}[+] Nuclei ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Quick Scan...${NORMAL}\n"
 nuclei -target $1
+
+echo -e "\n${GREEN}[+] Nikto ${NORMAL}"
+echo -e "${NORMAL}${CYAN}Scanning for more vulnerabilities...${NORMAL}\n"
+nikto -h $1
 
 # this might quickly lead to rate limit
 echo -e "\n${GREEN}[+] Feroxbuster ${NORMAL}"
