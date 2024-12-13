@@ -29,6 +29,8 @@ if [[ ! $DOMAIN =~ ^([a-zA-Z0-9](-?[a-zA-Z0-9])*\.)+[a-zA-Z]{2,}$ ]]; then
 fi
 
 URL=$(curl -Ls -o /dev/null -w "%{url_effective}\n" $1)
+URL="${URL%/}"
+
 echo "Target $DOMAIN | $URL"
 
 mkdir -p ~/bug-bounty/$DOMAIN
@@ -41,6 +43,10 @@ wafw00f $DOMAIN
 echo -e "\n${GREEN}[+] theHarvester ${NORMAL}"
 echo -e "${NORMAL}${CYAN}OSINT gathering...${NORMAL}\n"
 theHarvester -d $DOMAIN
+
+echo -e "\n${GREEN}[+] Robots.txt ${NORMAL}"
+echo -e "${NORMAL}${CYAN}Gathering Robots.txt disallowed links...${NORMAL}\n"
+curl -s $URL/robots.txt | grep -i "Disallow" | sort -u
 
 echo -e "\n${GREEN}[+] Subfinder ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Finding subdomains...${NORMAL}\n"
