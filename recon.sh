@@ -12,6 +12,7 @@ NORMAL="\e[0m"
 
 
 figlet recon
+
 echo -e "${BOLD}${YELLOW}Fast Recon Script - znadir\n${NORMAL}"
 
 if [ $# -eq "0" ]
@@ -20,22 +21,30 @@ then
 	exit 1
 fi
 
-echo "Target $1"
+DOMAIN=$1
 
-mkdir -p ~/bug-bounty/$1
-cd ~/bug-bounty/$1
+if [[ ! $DOMAIN =~ ^([a-zA-Z0-9](-?[a-zA-Z0-9])*\.)+[a-zA-Z]{2,}$ ]]; then
+    echo -e "${RED}[!] Invalid domain format: $DOMAIN \nExample: ./recon.sh example.com${NORMAL}"
+    exit 1
+fi
+
+URL=$(curl -Ls -o /dev/null -w "%{url_effective}\n" $1)
+echo "Target $DOMAIN | $URL"
+
+mkdir -p ~/bug-bounty/$DOMAIN
+cd ~/bug-bounty/$DOMAIN
 
 echo -e "\n${GREEN}[+] Wafw00f ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Identifying WAF...${NORMAL}\n"
-wafw00f $1
+wafw00f $DOMAIN
 
 echo -e "\n${GREEN}[+] theHarvester ${NORMAL}"
 echo -e "${NORMAL}${CYAN}OSINT gathering...${NORMAL}\n"
-theHarvester -d $1
+theHarvester -d $DOMAIN
 
 echo -e "\n${GREEN}[+] Subfinder ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Finding subdomains...${NORMAL}\n"
-subfinder -d $1 -all -active | tee subdomains.txt
+subfinder -d $DOMAIN -all -active | tee subdomains.txt
 
 echo -e "\n${GREEN}[+] Httpx ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Checking subdomains...${NORMAL}\n"
@@ -70,11 +79,11 @@ cat urls.txt | httpx -title -sc -td -location
 
 echo -e "\n${GREEN}[+] Nuclei ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Quick Scan...${NORMAL}\n"
-nuclei -target $1
+nuclei -target $DOMAIN
 
 echo -e "\n${GREEN}[+] Nikto ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Scanning for more vulnerabilities...${NORMAL}\n"
-nikto -h $1
+nikto -h $DOMAIN
 
 # this might quickly lead to rate limit
 echo -e "\n${GREEN}[+] Feroxbuster ${NORMAL}"
