@@ -91,6 +91,14 @@ echo -e "\n${GREEN}[+] Nikto ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Scanning for more vulnerabilities...${NORMAL}\n"
 nikto -h $DOMAIN
 
+echo -e "\n${GREEN}[+] x8 ${NORMAL}"
+echo -e "${NORMAL}${CYAN}Searching for hidden headers...${NORMAL}\n"
+x8 -u $URL --headers -w /usr/share/seclists/Discovery/Web-Content/BurpSuite-ParamMiner/lowercase-headers
+
+echo -e "\n${GREEN}[+] Arjun ${NORMAL}"
+echo -e "${NORMAL}${CYAN}Searching for hidden get params...${NORMAL}\n"
+arjun -u $URL
+
 # this might quickly lead to rate limit
 echo -e "\n${GREEN}[+] Feroxbuster ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Bruteforcing Directories...${NORMAL}\n"
