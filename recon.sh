@@ -13,7 +13,7 @@ NORMAL="\e[0m"
 
 figlet recon
 
-echo -e "${BOLD}${YELLOW}Fast Recon Script - znadir\n${NORMAL}"
+echo -e "${BOLD}${YELLOW}Fast & Optimized Recon Script - znadir\n${NORMAL}"
 
 if [ $# -eq "0" ]
 then
@@ -48,6 +48,22 @@ echo -e "\n${GREEN}[+] Robots.txt ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Gathering Robots.txt disallowed links...${NORMAL}\n"
 curl -s $URL/robots.txt | grep -i "Disallow" | sort -u
 
+echo -e "\n${GREEN}[+] Nuclei ${NORMAL}"
+echo -e "${NORMAL}${CYAN}Quick Scan...${NORMAL}\n"
+nuclei -target $DOMAIN
+
+echo -e "\n${GREEN}[+] Nikto ${NORMAL}"
+echo -e "${NORMAL}${CYAN}Scanning for more vulnerabilities...${NORMAL}\n"
+nikto -h $DOMAIN
+
+echo -e "\n${GREEN}[+] x8 ${NORMAL}"
+echo -e "${NORMAL}${CYAN}Searching for hidden headers...${NORMAL}\n"
+x8 -u $URL --headers -w /usr/share/seclists/Discovery/Web-Content/BurpSuite-ParamMiner/lowercase-headers
+
+echo -e "\n${GREEN}[+] Arjun ${NORMAL}"
+echo -e "${NORMAL}${CYAN}Searching for hidden get params...${NORMAL}\n"
+arjun -u $URL0
+
 echo -e "\n${GREEN}[+] Subfinder ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Finding subdomains...${NORMAL}\n"
 subfinder -d $DOMAIN -all -active | tee subdomains.txt
@@ -66,14 +82,15 @@ cat subdomains.txt | httpx -fc 301,404,403 | tee subdomains.txt
 
 echo -e "\n${GREEN}[+] Katana Url Crawling ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Crawling subdomains for URLs...${NORMAL}\n"
-cat subdomains.txt | katana -c 10 -ct 60 | tee urls.txt
+cat subdomains.txt | katana -c 10 -ct 30 | tee raw-urls.txt
 
 echo -e "\n${GREEN}[+] Get All Urls ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Getting URLs from external sources...${NORMAL}\n"
-cat subdomains.txt | gau --threads 5 | tee -a urls.txt
+cat subdomains.txt | gau --threads 5 | tee -a raw-urls.txt
 
-# deduplicate urls
-awk -i inplace '!seen[$0]++' urls.txt
+# clean urls
+uro -i raw-urls.txt -o urls.txt
+rm raw-urls.txt
 
 echo -e "\n${GREEN}[+] Secret Finder ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Scanning javascript files for secrets...${NORMAL}\n"
@@ -82,22 +99,6 @@ cat urls.txt | grep "\.js$" | (cd ~/tools/secretfinder && while read url; do .ve
 echo -e "\n${GREEN}[+] Checking Urls ${NORMAL}"
 echo -e "${NORMAL}${CYAN}Overview for urls...${NORMAL}\n"
 cat urls.txt | httpx -title -sc -td -location
-
-echo -e "\n${GREEN}[+] Nuclei ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Quick Scan...${NORMAL}\n"
-nuclei -target $DOMAIN
-
-echo -e "\n${GREEN}[+] Nikto ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Scanning for more vulnerabilities...${NORMAL}\n"
-nikto -h $DOMAIN
-
-echo -e "\n${GREEN}[+] x8 ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Searching for hidden headers...${NORMAL}\n"
-x8 -u $URL --headers -w /usr/share/seclists/Discovery/Web-Content/BurpSuite-ParamMiner/lowercase-headers
-
-echo -e "\n${GREEN}[+] Arjun ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Searching for hidden get params...${NORMAL}\n"
-arjun -u $URL
 
 # this might quickly lead to rate limit
 echo -e "\n${GREEN}[+] Feroxbuster ${NORMAL}"
