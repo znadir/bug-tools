@@ -106,7 +106,7 @@ uro -i raw-urls.txt -o urls.txt
 rm raw-urls.txt
 
 run_tool "Secret Finder" "Scanning javascript files for secrets..." <<EOF
-cat urls.txt | grep "\.js$" | (cd ~/tools/secretfinder && while read url; do .venv/bin/python SecretFinder.py -i $URL -o cli; done)
+cat urls.txt | grep "\.js$" | (cd ~/tools/secretfinder && while read jsurl; do .venv/bin/python SecretFinder.py -i $jsurl -o cli; done)
 EOF
 
 run_tool "Checking Urls" "Overview for urls..." <<EOF
