@@ -71,7 +71,7 @@ run_tool "Subfinder" "Finding subdomains..." <<EOF
 subfinder -d $DOMAIN -all -active | tee subdomains.txt
 EOF
 
-if [[ "$tool_name" == "Subfinder" && ! -s subdomains.txt ]]; then
+if [[ ! -s subdomains.txt ]]; then
 	echo -e "${RED}[!] No Subdomain found. Using Domain provided for other tools. ${NORMAL}"
 	echo "$DOMAIN" >> subdomains.txt
 fi
@@ -87,6 +87,11 @@ EOF
 run_tool "Httpx" "Filtering subdomains..." <<EOF
 cat subdomains.txt | httpx -fc 301,404,403 | tee subdomains.txt
 EOF
+
+if [[ ! -s subdomains.txt ]]; then
+        echo -e "${RED}[!] No Active Subdomain. ${NORMAL}"
+        exit 1
+fi
 
 run_tool "Katana" "Crawling subdomains for URLs..." <<EOF
 cat subdomains.txt | katana -c 10 -ct 30 | tee raw-urls.txt
