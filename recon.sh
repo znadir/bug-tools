@@ -10,97 +10,120 @@ DEFAULT="\e[39m"
 BOLD="\e[1m"
 NORMAL="\e[0m"
 
+run_tool() {
+	local tool_name=$1
+	local description=$2
+	local command
 
-figlet recon
+	echo -e "\n${GREEN}[+] $tool_name ${NORMAL}"
+	echo -e "${NORMAL}${CYAN}$description${NORMAL}\n"
+	command=$(</dev/stdin)
+	eval "$command"
+}
 
-echo -e "${BOLD}${YELLOW}Fast & Optimized Recon Script - znadir\n${NORMAL}"
+setup() {
+        local domain=$1
 
-if [ $# -eq "0" ]
-then
-	echo -e "${RED}[!] No Domain Passed \nExample: ./recon.sh example.com${NORMAL}"
-	exit 1
-fi
+        figlet recon
+        echo -e "${BOLD}${YELLOW}Fast & Optimized Recon Script - znadir\n${NORMAL}"
 
-DOMAIN=$1
+        if [ $# -eq "0" ]
+        then
+                echo -e "${RED}[!] No Domain Passed \nExample: ./recon.sh example.com${NORMAL}"
+                exit 1
+        fi
 
-if [[ ! $DOMAIN =~ ^([a-zA-Z0-9](-?[a-zA-Z0-9])*\.)+[a-zA-Z]{2,}$ ]]; then
-    echo -e "${RED}[!] Invalid domain format: $DOMAIN \nExample: ./recon.sh example.com${NORMAL}"
-    exit 1
-fi
+        if [[ ! $domain =~ ^([a-zA-Z0-9](-?[a-zA-Z0-9])*\.)+[a-zA-Z]{2,}$ ]]; then
+                echo -e "${RED}[!] Invalid domain format: $DOMAIN \nExample: ./recon.sh example.com${NORMAL}"
+                exit 1
+        fi
 
-URL=$(curl -Ls -o /dev/null -w "%{url_effective}\n" $1)
-URL="${URL%/}"
+        local url=$(curl -Ls -o /dev/null -w "%{url_effective}\n" $1)
+        local url="${url%/}"
 
-echo "Target $DOMAIN | $URL"
+	echo "Target $domain | $url"
 
-mkdir -p ~/bug-bounty/$DOMAIN
-cd ~/bug-bounty/$DOMAIN
+	mkdir -p ~/bug-bounty/$domain
+	cd ~/bug-bounty/$domain
 
-echo -e "\n${GREEN}[+] Wafw00f ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Identifying WAF...${NORMAL}\n"
+	export DOMAIN=$domain
+	export URL=$url
+}
+
+setup "$1"
+
+####################### Run tools
+
+run_tool "Wafw00f" "Identifying WAF..." <<EOF
 wafw00f $DOMAIN
+EOF
 
-echo -e "\n${GREEN}[+] theHarvester ${NORMAL}"
-echo -e "${NORMAL}${CYAN}OSINT gathering...${NORMAL}\n"
+
+run_tool "theHarvester" "OSINT gathering..." <<EOF
 theHarvester -d $DOMAIN
+EOF
 
-echo -e "\n${GREEN}[+] Robots.txt ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Gathering Robots.txt disallowed links...${NORMAL}\n"
+run_tool "Robots.txt" "Gathering Robots.txt disallowed links..." <<EOF
 curl -s $URL/robots.txt | grep -i "Disallow" | sort -u
+EOF
 
-echo -e "\n${GREEN}[+] Nuclei ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Quick Scan...${NORMAL}\n"
-nuclei -target $DOMAIN
-
-echo -e "\n${GREEN}[+] Nikto ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Scanning for more vulnerabilities...${NORMAL}\n"
-nikto -h $DOMAIN
-
-echo -e "\n${GREEN}[+] x8 ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Searching for hidden headers...${NORMAL}\n"
-x8 -u $URL --headers -w /usr/share/seclists/Discovery/Web-Content/BurpSuite-ParamMiner/lowercase-headers
-
-echo -e "\n${GREEN}[+] Arjun ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Searching for hidden get params...${NORMAL}\n"
-arjun -u $URL0
-
-echo -e "\n${GREEN}[+] Subfinder ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Finding subdomains...${NORMAL}\n"
+run_tool "Subfinder" "Finding subdomains..." <<EOF
 subfinder -d $DOMAIN -all -active | tee subdomains.txt
+EOF
 
-echo -e "\n${GREEN}[+] Httpx ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Checking subdomains...${NORMAL}\n"
+if [[ "$tool_name" == "Subfinder" && ! -s subdomains.txt ]]; then
+	echo -e "${RED}[!] No Subdomain found. Using Domain provided for other tools. ${NORMAL}"
+	echo "$DOMAIN" >> subdomains.txt
+fi
+
+run_tool "Httpx" "Checking subdomains..." <<EOF
 cat subdomains.txt | httpx -title -sc -td -location
+EOF
 
-echo -e "\n${GREEN}[+] Subzy ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Scanning for subdomain takeover...${NORMAL}\n"
+run_tool "Subzy" "Scanning for subdomain takeover..." <<EOF
 subzy run --targets subdomains.txt
+EOF
 
-echo -e "\n${GREEN}[+] Httpx ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Filtering subdomains...${NORMAL}\n"
+run_tool "Httpx" "Filtering subdomains..." <<EOF
 cat subdomains.txt | httpx -fc 301,404,403 | tee subdomains.txt
+EOF
 
-echo -e "\n${GREEN}[+] Katana Url Crawling ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Crawling subdomains for URLs...${NORMAL}\n"
+run_tool "Katana" "Crawling subdomains for URLs..." <<EOF
 cat subdomains.txt | katana -c 10 -ct 30 | tee raw-urls.txt
+EOF
 
-echo -e "\n${GREEN}[+] Get All Urls ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Getting URLs from external sources...${NORMAL}\n"
+run_tool "Get All Urls" "Getting URLs from external sources..." <<EOF
 cat subdomains.txt | gau --threads 5 | tee -a raw-urls.txt
+EOF
 
 # clean urls
 uro -i raw-urls.txt -o urls.txt
 rm raw-urls.txt
 
-echo -e "\n${GREEN}[+] Secret Finder ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Scanning javascript files for secrets...${NORMAL}\n"
+run_tool "Secret Finder" "Scanning javascript files for secrets..." <<EOF
 cat urls.txt | grep "\.js$" | (cd ~/tools/secretfinder && while read url; do .venv/bin/python SecretFinder.py -i $url -o cli; done)
+EOF
 
-echo -e "\n${GREEN}[+] Checking Urls ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Overview for urls...${NORMAL}\n"
+run_tool "Checking Urls" "Overview for urls..." <<EOF
 cat urls.txt | httpx -title -sc -td -location
+EOF
 
-# this might quickly lead to rate limit
-echo -e "\n${GREEN}[+] Feroxbuster ${NORMAL}"
-echo -e "${NORMAL}${CYAN}Bruteforcing Directories...${NORMAL}\n"
+run_tool "Nuclei" "Quick Scan..." <<EOF
+nuclei -target $DOMAIN
+EOF
+
+run_tool "Nikto" "Scanning for more vulnerabilities..." <<EOF
+nikto -h $DOMAIN
+EOF
+
+run_tool "x8" "Searching for hidden headers..." <<EOF
+x8 -u $URL --headers -w /usr/share/seclists/Discovery/Web-Content/BurpSuite-ParamMiner/lowercase-headers
+EOF
+
+run_tool "Arjun" "Searching for hidden get params..." <<EOF
+arjun -u $URL
+EOF
+
+run_tool "Feroxbuster" "Bruteforcing Directories..." <<EOF
 cat subdomains.txt | feroxbuster --stdin -t 10 -C 403,404,429 --random-agent
+EOF
