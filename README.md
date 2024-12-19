@@ -1,3 +1,3 @@
-# Bug Recon
+# Bug Tools
 
-My custom script to automate my recon during bug bounty
+Custom scripts I use to automate bug bounty
