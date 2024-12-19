@@ -1,4 +1,5 @@
 import os
+import re
 import argparse
 
 
@@ -15,11 +16,9 @@ def filter_emails(file_path):
 
     try:
         with open(file_path) as f:
-            lines = f.readlines()
+            content = f.read()
 
-        email_lines = [line.replace("\n", "").strip() for line in lines if "@" in line]
-        emails = list(set(email_lines))
-
+        emails = re.findall(r"\S+@\S+\.\S+", content)
         for email in emails:
             print(email)
 
