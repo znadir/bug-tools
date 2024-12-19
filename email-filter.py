@@ -17,7 +17,7 @@ def filter_emails(file_path):
         with open(file_path) as f:
             lines = f.readlines()
 
-        email_lines = [line.replace("\n", "") for line in lines if "@" in line]
+        email_lines = [line.replace("\n", "").strip() for line in lines if "@" in line]
         emails = list(set(email_lines))
 
         for email in emails:
