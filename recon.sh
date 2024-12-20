@@ -68,7 +68,7 @@ curl -s $URL/robots.txt | grep -i "Disallow" | sort -u
 EOF
 
 run_tool "Subfinder" "Finding subdomains..." <<EOF
-subfinder -d $DOMAIN -all | tee subdomains.txt
+subfinder -d $DOMAIN -all -active | tee subdomains.txt
 EOF
 
 if [[ ! -s subdomains.txt ]]; then
@@ -85,7 +85,7 @@ subzy run --targets subdomains.txt
 EOF
 
 run_tool "Httpx" "Filtering subdomains..." <<EOF
-cat subdomains.txt | httpx -fd -fc 403,401 | tee subdomains.txt
+cat subdomains.txt | httpx -fd -fc 403,401 -fl 0 -fep | tee subdomains.txt
 EOF
 
 if [[ ! -s subdomains.txt ]]; then
