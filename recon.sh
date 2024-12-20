@@ -85,7 +85,7 @@ subzy run --targets subdomains.txt
 EOF
 
 run_tool "Httpx" "Filtering subdomains..." <<EOF
-cat subdomains.txt | httpx -random-agent -fc 500,501 -fl 0 | tee subdomains.txt
+cat subdomains.txt | httpx -random-agent -fc 500,501 -mr "</html>" -fr | awk '{print $1}' | tee subdomains.txt
 EOF
 
 if [[ ! -s subdomains.txt ]]; then
