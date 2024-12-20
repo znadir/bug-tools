@@ -85,7 +85,7 @@ subzy run --targets subdomains.txt
 EOF
 
 run_tool "Httpx" "Filtering subdomains..." <<EOF
-cat subdomains.txt | httpx -random-agent -fc 500,501 -mr "</html>" -fr | awk '{print $1}' | awk -F / '{print $3}' | tee subdomains.txt
+cat subdomains.txt | httpx -random-agent -fc 500,501 -mr "</html>" -fr | awk '{print \$1}' | awk -F / '{print \$3}' | tee subdomains.txt
 EOF
 
 if [[ ! -s subdomains.txt ]]; then
@@ -94,7 +94,7 @@ if [[ ! -s subdomains.txt ]]; then
 fi
 
 run_tool "Naabu" "Scanning subs top 100 ports..." <<EOF
-cat subdomains.txt | naabu -top-ports 100 -exclude-ports 80,443 -exclude-cdn -nmap-cli 'nmap -A -sV'
+cat subdomains.txt | naabu -top-ports 100 -exclude-ports 80,443 -exclude-cdn -nmap-cli 'nmap -sV'
 EOF
 
 run_tool "Katana" "Crawling subdomains for URLs..." <<EOF
