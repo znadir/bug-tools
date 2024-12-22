@@ -93,10 +93,6 @@ if [[ ! -s subdomains.txt ]]; then
         exit 1
 fi
 
-run_tool "Naabu" "Scanning subs top 100 ports..." <<EOF
-cat subdomains.txt | naabu -top-ports 100 -exclude-ports 80,443 -exclude-cdn -nmap-cli 'nmap -sV'
-EOF
-
 run_tool "Katana" "Crawling subdomains for URLs..." <<EOF
 cat subdomains.txt | katana -c 10 -ct 30 | tee raw-urls.txt
 EOF
